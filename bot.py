@@ -8,7 +8,7 @@ import os
 
 from telegram import Bot, InlineKeyboardButton, InlineKeyboardMarkup
 
-# 🔑 Get from GitHub Secrets
+# 🔑 GitHub Secrets
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 CHAT_ID = int(os.getenv("CHAT_ID"))
 
@@ -19,7 +19,7 @@ HEADERS = {
 }
 
 
-# 🖼 Get image from article
+# 🖼 Get image
 def get_full_image(link):
     try:
         res = requests.get(link, headers=HEADERS, timeout=5)
@@ -28,13 +28,14 @@ def get_full_image(link):
         meta = soup.find("meta", property="og:image")
         if meta:
             return meta.get("content")
+
     except Exception as e:
         print("Image fetch error:", e)
 
     return None
 
 
-# 📰 Fetch news
+# 📰 Get news
 def get_news():
     feed = feedparser.parse("https://techcrunch.com/feed/")
     news_list = []
@@ -51,7 +52,7 @@ def get_news():
     return news_list
 
 
-# 🔥 Catchy titles
+# 🔥 Title style
 def make_catchy(title):
     hooks = [
         "🚀 Breaking:",
@@ -80,13 +81,11 @@ async def send_news():
 📰 {title}
 """
 
-            # 🔘 Button
             keyboard = [
                 [InlineKeyboardButton("📖 Read Full Article", url=link)]
             ]
             reply_markup = InlineKeyboardMarkup(keyboard)
 
-            # 🖼 Send with image if available
             if image:
                 try:
                     await bot.send_photo(
@@ -116,6 +115,6 @@ async def send_news():
             print("❌ Error:", e)
 
 
-# 🚀 Run once (GitHub Actions will handle schedule)
+# 🚀 RUN ONCE (IMPORTANT)
 if __name__ == "__main__":
     asyncio.run(send_news())
