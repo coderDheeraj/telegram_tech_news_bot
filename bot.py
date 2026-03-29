@@ -4,14 +4,11 @@ from bs4 import BeautifulSoup
 import random
 import html
 import asyncio
-import schedule
-import time
 import os
 
 from telegram import Bot, InlineKeyboardButton, InlineKeyboardMarkup
 
-# 🔑 YOUR DETAILS
-
+# 🔑 Get from GitHub Secrets
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 CHAT_ID = int(os.getenv("CHAT_ID"))
 
@@ -31,8 +28,10 @@ def get_full_image(link):
         meta = soup.find("meta", property="og:image")
         if meta:
             return meta.get("content")
-    except:
-        return None
+    except Exception as e:
+        print("Image fetch error:", e)
+
+    return None
 
 
 # 📰 Fetch news
@@ -117,13 +116,6 @@ async def send_news():
             print("❌ Error:", e)
 
 
-# ⏰ Schedule job
-def job():
+# 🚀 Run once (GitHub Actions will handle schedule)
+if __name__ == "__main__":
     asyncio.run(send_news())
-
-   # 🔥 run once immediately
-# ⏰ Set your time (24-hour format)
-schedule.every(1).minutes.do(job)
-print("🤖 Bot running...")
-
-
