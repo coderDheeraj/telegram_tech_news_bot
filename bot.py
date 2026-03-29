@@ -9,7 +9,7 @@ import os
 
 from telegram import Bot, InlineKeyboardButton, InlineKeyboardMarkup
 
-# 🔑 GitHub Secrets
+
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 CHAT_ID = int(os.getenv("CHAT_ID"))
 
