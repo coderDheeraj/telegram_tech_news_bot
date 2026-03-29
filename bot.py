@@ -6,12 +6,14 @@ import html
 import asyncio
 import schedule
 import time
+import os
 
 from telegram import Bot, InlineKeyboardButton, InlineKeyboardMarkup
 
 # 🔑 YOUR DETAILS
-BOT_TOKEN = "8671117308:AAHFpPaBYXWZLHqluF9VQlpgpGwN05aMxjY"
-CHAT_ID = 7136143411   # ❗ integer (no quotes)
+
+BOT_TOKEN = os.getenv("BOT_TOKEN")
+CHAT_ID = int(os.getenv("CHAT_ID"))
 
 bot = Bot(token=BOT_TOKEN)
 
