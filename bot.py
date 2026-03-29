@@ -126,7 +126,4 @@ def job():
 schedule.every(1).minutes.do(job)
 print("🤖 Bot running...")
 
-# 🔁 Keep running
-while True:
-    schedule.run_pending()
-    time.sleep(60)
+
