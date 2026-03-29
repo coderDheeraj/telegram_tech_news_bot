@@ -1,27 +1,27 @@
-name: Run Telegram Bot Daily
+name: Telegram Bot
 
 on:
+  workflow_dispatch:
   schedule:
-    - cron: '30 3 * * *'   # runs daily (UTC time)
-  workflow_dispatch:       # manual run button
+    - cron: '30 3 * * *'
 
 jobs:
-  run-bot:
+  run:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout code
+      - name: Checkout
         uses: actions/checkout@v3
 
-      - name: Set up Python
+      - name: Setup Python
         uses: actions/setup-python@v4
         with:
           python-version: '3.11'
 
-      - name: Install dependencies
+      - name: Install Requirements
         run: pip install -r requirements.txt
 
-      - name: Run bot
+      - name: Run Bot
         env:
           BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
           CHAT_ID: ${{ secrets.CHAT_ID }}
