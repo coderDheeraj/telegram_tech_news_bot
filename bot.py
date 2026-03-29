@@ -41,14 +41,15 @@ def get_news():
     feed = feedparser.parse("https://techcrunch.com/feed/")
     news_list = []
 
-    for entry in feed.entries[:5]:
-        image = get_full_image(entry.link)
+    entry = random.choice(feed.entries)
 
-        news_list.append({
-            "title": entry.title,
-            "link": entry.link,
-            "image": image
-        })
+    image = get_full_image(entry.link)
+
+    news_list.append({
+        "title": entry.title,
+        "link": entry.link,
+        "image": image
+         })
 
     return news_list
 
