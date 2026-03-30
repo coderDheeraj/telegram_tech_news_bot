@@ -18,22 +18,21 @@ HEADERS = {
     "User-Agent": "Mozilla/5.0"
 }
 
-# 🌐 Multi-source RSS
+# 🌐 HIGH QUALITY SOURCES ONLY
 RSS_FEEDS = [
     "https://techcrunch.com/feed/",
     "https://www.theverge.com/rss/index.xml",
-    "https://hnrss.org/frontpage"
+    "https://www.wired.com/feed/rss"
 ]
 
-# ❌ Block junk domains
+# ❌ Block unwanted domains
 BLOCKED_DOMAINS = [
     "github.com",
-    "news.ycombinator.com",
     "reddit.com"
 ]
 
 
-# 📰 Fetch all news
+# 📰 Fetch news
 def get_news():
     news = []
 
@@ -50,17 +49,27 @@ def get_news():
     return news
 
 
+# 🧠 CLEAN + SMART SUMMARY
 def clean_summary(text):
     text = BeautifulSoup(text, "html.parser").get_text()
+
+    # Remove common junk
+    for phrase in [
+        "This article",
+        "The article",
+        "Read more",
+        "Continue reading"
+    ]:
+        text = text.replace(phrase, "")
 
     words = text.split()
     summary = " ".join(words[:40])
 
-    # ✅ Fix incomplete sentence
+    # Fix sentence ending
     if not summary.endswith("."):
         summary = summary.rsplit(" ", 1)[0] + "..."
 
-    return summary 
+    return summary
 
 
 # 🖼 Extract image
@@ -87,10 +96,9 @@ def make_catchy(title):
     return f"{random.choice(hooks)} {title}"
 
 
-# 🏷 Smart hashtags
+# 🏷 Smart tags
 def get_tags(title):
     t = title.lower()
-
     tags = []
 
     if "ai" in t:
@@ -118,7 +126,7 @@ async def send_news():
     for news in news_list:
         link = news["link"]
 
-        # ❌ Skip bad sources
+        # ❌ Skip bad domains
         if any(domain in link for domain in BLOCKED_DOMAINS):
             continue
 
@@ -126,7 +134,7 @@ async def send_news():
             title = html.escape(make_catchy(news["title"]))
             summary = clean_summary(news["summary"])
 
-            # ❌ Skip weak content
+            # ❌ Skip weak summaries
             if len(summary.split()) < 8:
                 continue
 
@@ -145,7 +153,7 @@ async def send_news():
 {tags}
 """
 
-            # 🖼 Send with image if available
+            # 🖼 Send with image
             if image:
                 try:
                     await bot.send_photo(
@@ -165,13 +173,12 @@ async def send_news():
                 )
 
             print("✅ Sent:", title)
-
-            break  # send only one per run
+            break  # send only one post
 
         except Exception as e:
             print("❌ Error:", e)
 
 
-# 🚀 Run once (GitHub Actions)
+# 🚀 Run once
 if __name__ == "__main__":
     asyncio.run(send_news())
