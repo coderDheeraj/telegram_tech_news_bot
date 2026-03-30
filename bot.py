@@ -60,7 +60,7 @@ def clean_summary(text):
     if not summary.endswith("."):
         summary = summary.rsplit(" ", 1)[0] + "..."
 
-    return summary 🔥 short + viral
+    return summary 
 
 
 # 🖼 Extract image
