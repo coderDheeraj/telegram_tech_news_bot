@@ -19,6 +19,16 @@ HEADERS = {
     "User-Agent": "Mozilla/5.0"
 }
 
+def generate_fallback_summary(text):
+    sentences = text.split(". ")
+
+    # pick first 2–3 meaningful sentences
+    summary = ". ".join(sentences[:3])
+
+    # limit words
+    words = summary.split()
+    return " ".join(words[:60])
+
 
 # 🖼 Get image from article
 def get_full_image(link):
@@ -69,30 +79,21 @@ def summarize_text(text):
     }
 
     try:
-        response = requests.post(API_URL, headers=headers, json=payload, timeout=20)
+        response = requests.post(API_URL, headers=headers, json=payload, timeout=10)
         result = response.json()
 
-        # 🔍 DEBUG (important)
         print("HF response:", result)
 
-        # ✅ SUCCESS
+        # ✅ If AI works
         if isinstance(result, list):
             summary = result[0]["summary_text"]
-
-            # ✂️ Limit to 60 words
-            words = summary.split()
-            return " ".join(words[:60])
-
-        # ⚠️ Model loading → wait and retry
-        elif isinstance(result, dict) and "error" in result:
-            print("HF error:", result["error"])
-            return "⚠️ AI summary temporarily unavailable."
+            return " ".join(summary.split()[:60])
 
     except Exception as e:
-        print("HF exception:", e)
+        print("HF error:", e)
 
-    return "⚠️ Summary not available."
-
+    # 🔥 FALLBACK (ALWAYS WORKS)
+    return generate_fallback_summary(text)
 # 🔥 Catchy title
 def make_catchy(title):
     hooks = [
