@@ -5,7 +5,6 @@ import random
 import html
 import asyncio
 import os
-import json
 
 from telegram import Bot
 
@@ -19,64 +18,64 @@ HEADERS = {
     "User-Agent": "Mozilla/5.0"
 }
 
-# 🌐 RSS Sources
+# 🌐 Multi-source RSS
 RSS_FEEDS = [
     "https://techcrunch.com/feed/",
     "https://www.theverge.com/rss/index.xml",
     "https://hnrss.org/frontpage"
 ]
 
-SEEN_FILE = "seen.json"
+# ❌ Block junk domains
+BLOCKED_DOMAINS = [
+    "github.com",
+    "news.ycombinator.com",
+    "reddit.com"
+]
 
 
-# 📂 Load seen links
-def load_seen():
-    if os.path.exists(SEEN_FILE):
-        with open(SEEN_FILE, "r") as f:
-            return set(json.load(f))
-    return set()
-
-
-# 💾 Save seen links
-def save_seen(seen):
-    with open(SEEN_FILE, "w") as f:
-        json.dump(list(seen), f)
-
-
-# 📰 Get news from all sources
+# 📰 Fetch all news
 def get_news():
-    all_news = []
+    news = []
 
     for url in RSS_FEEDS:
         feed = feedparser.parse(url)
 
         for entry in feed.entries[:5]:
-            all_news.append({
+            news.append({
                 "title": entry.title,
                 "link": entry.link,
                 "summary": entry.get("summary", "")
             })
 
-    return all_news
+    return news
 
 
+# 🧠 Clean short summary
 def clean_summary(text):
     text = BeautifulSoup(text, "html.parser").get_text()
 
-    # Remove filler phrases
-    for phrase in [
-        "It's rare for",
-        "This article",
-        "The article",
-        "In this article"
-    ]:
+    # remove unwanted phrases
+    for phrase in ["This article", "The article", "It's rare for"]:
         text = text.replace(phrase, "")
 
     words = text.split()
-    return " ".join(words[:40])  # 🔥 shorter = more engaging
+    return " ".join(words[:40])  # 🔥 short + viral
 
 
-# 🔥 Catchy title
+# 🖼 Extract image
+def get_image(link):
+    try:
+        res = requests.get(link, headers=HEADERS, timeout=5)
+        soup = BeautifulSoup(res.text, "html.parser")
+
+        meta = soup.find("meta", property="og:image")
+        if meta:
+            return meta.get("content")
+    except:
+        return None
+
+
+# 🔥 Viral headline
 def make_catchy(title):
     hooks = [
         "🚨 Breaking:",
@@ -89,21 +88,26 @@ def make_catchy(title):
 
 # 🏷 Smart hashtags
 def get_tags(title):
-    title_lower = title.lower()
+    t = title.lower()
 
-    if "ai" in title_lower:
-        return "#AI #Tech"
-    elif "startup" in title_lower:
-        return "#Startup #Tech"
-    elif "google" in title_lower or "meta" in title_lower:
-        return "#BigTech #Tech"
-    else:
-        return "#TechNews"
+    tags = []
+
+    if "ai" in t:
+        tags.append("#AI")
+    if "startup" in t:
+        tags.append("#Startup")
+    if "crypto" in t:
+        tags.append("#Crypto")
+    if "google" in t or "meta" in t or "microsoft" in t:
+        tags.append("#BigTech")
+
+    tags.append("#Tech")
+
+    return " ".join(tags)
 
 
 # 🤖 Send news
 async def send_news():
-    seen = load_seen()
     news_list = get_news()
 
     print("🚀 Sending news...")
@@ -113,26 +117,20 @@ async def send_news():
     for news in news_list:
         link = news["link"]
 
-        # ❌ Skip unwanted sources
-        if any(domain in link for domain in [
-            "github.com",
-            "news.ycombinator.com",
-            "reddit.com"
-        ]):
-            continue
-
-        # ❌ Skip duplicates
-        if link in seen:
+        # ❌ Skip bad sources
+        if any(domain in link for domain in BLOCKED_DOMAINS):
             continue
 
         try:
             title = html.escape(make_catchy(news["title"]))
             summary = clean_summary(news["summary"])
-            tags = get_tags(news["title"])
 
-            # ❌ Skip weak summaries
-            if len(summary.split()) < 10:
+            # ❌ Skip weak content
+            if len(summary.split()) < 8:
                 continue
+
+            tags = get_tags(news["title"])
+            image = get_image(link)
 
             message = f"""
 🚀 Tech Pulse
@@ -146,15 +144,26 @@ async def send_news():
 {tags}
 """
 
-            await bot.send_message(
-                chat_id=CHAT_ID,
-                text=message
-            )
+            # 🖼 Send with image if available
+            if image:
+                try:
+                    await bot.send_photo(
+                        chat_id=CHAT_ID,
+                        photo=image,
+                        caption=message
+                    )
+                except:
+                    await bot.send_message(
+                        chat_id=CHAT_ID,
+                        text=message
+                    )
+            else:
+                await bot.send_message(
+                    chat_id=CHAT_ID,
+                    text=message
+                )
 
             print("✅ Sent:", title)
-
-            seen.add(link)
-            save_seen(seen)
 
             break  # send only one per run
 
