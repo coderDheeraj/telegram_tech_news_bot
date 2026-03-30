@@ -52,8 +52,20 @@ def get_article_text(link):
         res = requests.get(link, headers=HEADERS, timeout=5)
         soup = BeautifulSoup(res.text, "html.parser")
 
-        paragraphs = soup.find_all("p")
+        # 🔥 Target real article content
+        article = soup.find("div", {"class": "article-content"})
+
+        if not article:
+            article = soup.find("div", {"class": "entry-content"})
+
+        paragraphs = article.find_all("p") if article else soup.find_all("p")
+
         text = " ".join([p.get_text() for p in paragraphs])
+
+        # 🧹 Clean garbage words
+        blacklist = ["TechCrunch", "Subscribe", "Sign up", "Newsletter"]
+        for word in blacklist:
+            text = text.replace(word, "")
 
         return text[:1000]
 
