@@ -60,38 +60,38 @@ def summarize_text(text):
         "Authorization": f"Bearer {HF_API_KEY}"
     }
 
-    prompt = f"""
-Summarize this tech news in under 60 words.
-Be direct and concise.
-Do not use phrases like 'this article explains'.
-
-{text[:800]}
-"""
-
-    payload = {"inputs": prompt}
+    payload = {
+        "inputs": text[:800],
+        "parameters": {
+            "max_length": 80,
+            "min_length": 30
+        }
+    }
 
     try:
-        response = requests.post(API_URL, headers=headers, json=payload, timeout=15)
+        response = requests.post(API_URL, headers=headers, json=payload, timeout=20)
         result = response.json()
 
+        # 🔍 DEBUG (important)
+        print("HF response:", result)
+
+        # ✅ SUCCESS
         if isinstance(result, list):
             summary = result[0]["summary_text"]
 
             # ✂️ Limit to 60 words
             words = summary.split()
-            summary = " ".join(words[:60])
+            return " ".join(words[:60])
 
-            # 🧹 Clean phrases
-            summary = summary.replace("This article", "")
-            summary = summary.replace("The article", "")
-
-            return summary.strip()
+        # ⚠️ Model loading → wait and retry
+        elif isinstance(result, dict) and "error" in result:
+            print("HF error:", result["error"])
+            return "⚠️ AI summary temporarily unavailable."
 
     except Exception as e:
-        print("HF error:", e)
+        print("HF exception:", e)
 
-    return "Summary not available."
-
+    return "⚠️ Summary not available."
 
 # 🔥 Catchy title
 def make_catchy(title):
