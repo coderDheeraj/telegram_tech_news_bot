@@ -60,11 +60,20 @@ def get_news():
     return all_news
 
 
-# 🧠 Clean summary
 def clean_summary(text):
     text = BeautifulSoup(text, "html.parser").get_text()
+
+    # Remove filler phrases
+    for phrase in [
+        "It's rare for",
+        "This article",
+        "The article",
+        "In this article"
+    ]:
+        text = text.replace(phrase, "")
+
     words = text.split()
-    return " ".join(words[:60])
+    return " ".join(words[:40])  # 🔥 shorter = more engaging
 
 
 # 🔥 Catchy title
