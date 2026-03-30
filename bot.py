@@ -112,6 +112,13 @@ async def send_news():
             title = html.escape(make_catchy(news["title"]))
             link = news["link"]
 
+# ❌ Skip unwanted links
+if any(domain in link for domain in [
+    "github.com",
+    "news.ycombinator.com",
+    "reddit.com"
+]):
+    continue
             summary = clean_summary(news["summary"])
             tags = get_tags(news["title"])
 
