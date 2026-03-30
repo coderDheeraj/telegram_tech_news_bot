@@ -5,13 +5,13 @@ import random
 import html
 import asyncio
 import os
+import json
 
 from telegram import Bot
 
-# 🔑 Secrets (GitHub)
+# 🔑 Secrets
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 CHAT_ID = int(os.getenv("CHAT_ID"))
-HF_API_KEY = os.getenv("HF_API_KEY")
 
 bot = Bot(token=BOT_TOKEN)
 
@@ -19,141 +19,130 @@ HEADERS = {
     "User-Agent": "Mozilla/5.0"
 }
 
-def generate_fallback_summary(text):
-    sentences = text.split(". ")
+# 🗂 Multi-source RSS
+RSS_FEEDS = [
+    "https://techcrunch.com/feed/",
+    "https://www.theverge.com/rss/index.xml",
+    "https://hnrss.org/frontpage"
+]
 
-    # pick first 2–3 meaningful sentences
-    summary = ". ".join(sentences[:3])
+# 📁 File to store sent links
+SEEN_FILE = "seen.json"
 
-    # limit words
-    words = summary.split()
+
+# 📂 Load seen links
+def load_seen():
+    if os.path.exists(SEEN_FILE):
+        with open(SEEN_FILE, "r") as f:
+            return set(json.load(f))
+    return set()
+
+
+# 💾 Save seen links
+def save_seen(seen):
+    with open(SEEN_FILE, "w") as f:
+        json.dump(list(seen), f)
+
+
+# 📰 Get all news
+def get_news():
+    all_news = []
+
+    for url in RSS_FEEDS:
+        feed = feedparser.parse(url)
+
+        for entry in feed.entries[:5]:
+            all_news.append({
+                "title": entry.title,
+                "link": entry.link,
+                "summary": entry.get("summary", "")
+            })
+
+    return all_news
+
+
+# 🧠 Clean summary (≤ 60 words)
+def clean_summary(text):
+    text = BeautifulSoup(text, "html.parser").get_text()
+
+    words = text.split()
     return " ".join(words[:60])
 
 
-# 🖼 Get image from article
-def get_full_image(link):
-    try:
-        res = requests.get(link, headers=HEADERS, timeout=5)
-        soup = BeautifulSoup(res.text, "html.parser")
-
-        meta = soup.find("meta", property="og:image")
-        if meta:
-            return meta.get("content")
-
-    except Exception as e:
-        print("Image error:", e)
-
-    return None
-
-
-# 📰 Extract article text
-def get_article_text(link):
-    try:
-        res = requests.get(link, headers=HEADERS, timeout=5)
-        soup = BeautifulSoup(res.text, "html.parser")
-
-        # 🔥 Target real article content
-        article = soup.find("div", {"class": "article-content"})
-
-        if not article:
-            article = soup.find("div", {"class": "entry-content"})
-
-        paragraphs = article.find_all("p") if article else soup.find_all("p")
-
-        text = " ".join([p.get_text() for p in paragraphs])
-
-        # 🧹 Clean garbage words
-        blacklist = ["TechCrunch", "Subscribe", "Sign up", "Newsletter"]
-        for word in blacklist:
-            text = text.replace(word, "")
-
-        return text[:1000]
-
-    except Exception as e:
-        print("Text error:", e)
-        return ""
-
-
-# 🧠 HuggingFace summary (≤ 60 words)
-def summarize_text(text):
-    API_URL = "https://api-inference.huggingface.co/models/facebook/bart-large-cnn"
-
-    headers = {
-        "Authorization": f"Bearer {HF_API_KEY}"
-    }
-
-    payload = {
-        "inputs": text[:800],
-        "parameters": {
-            "max_length": 80,
-            "min_length": 30
-        }
-    }
-
-    try:
-        response = requests.post(API_URL, headers=headers, json=payload, timeout=10)
-        result = response.json()
-
-        print("HF response:", result)
-
-        # ✅ If AI works
-        if isinstance(result, list):
-            summary = result[0]["summary_text"]
-            return " ".join(summary.split()[:60])
-
-    except Exception as e:
-        print("HF error:", e)
-
-    # 🔥 FALLBACK (ALWAYS WORKS)
-    return generate_fallback_summary(text)
-# 🔥 Catchy title
+# 🔥 Viral headline
 def make_catchy(title):
     hooks = [
-        "🚀 Breaking:",
+        "🚨 Breaking:",
         "🔥 Trending:",
-        "⚡ Update:",
-        "💡 Tech:"
+        "⚡ Big Update:",
+        "💡 Must Know:"
     ]
     return f"{random.choice(hooks)} {title}"
 
 
+# 🏷 Smart hashtags
+def get_tags(title):
+    title_lower = title.lower()
+
+    if "ai" in title_lower:
+        return "#AI #Tech"
+    elif "startup" in title_lower:
+        return "#Startup #Tech"
+    elif "google" in title_lower or "meta" in title_lower:
+        return "#BigTech #Tech"
+    else:
+        return "#TechNews"
+
+
 # 🤖 Send news
 async def send_news():
-    feed = feedparser.parse("https://techcrunch.com/feed/")
+    seen = load_seen()
+    news_list = get_news()
 
     print("🚀 Sending news...")
 
-    try:
-        entry = random.choice(feed.entries)  # 🔥 only one news
+    # Shuffle for randomness
+    random.shuffle(news_list)
 
-        title = html.escape(make_catchy(entry.title))
-        link = entry.link
+    for news in news_list:
+        if news["link"] in seen:
+            continue
 
-        # 📄 Get content + summary
-        article_text = get_article_text(link)
-        summary = summarize_text(article_text)
+        try:
+            title = html.escape(make_catchy(news["title"]))
+            link = news["link"]
 
-        message = f"""
-🚀 Tech News
+            summary = clean_summary(news["summary"])
+            tags = get_tags(news["title"])
+
+            message = f"""
+🚀 Tech Pulse
 
 📰 {title}
 
 🧠 {summary}
 
 🔗 {link}
+
+{tags}
 """
 
-        await bot.send_message(
-            chat_id=CHAT_ID,
-            text=message
-        )
+            await bot.send_message(
+                chat_id=CHAT_ID,
+                text=message
+            )
 
-        print("✅ Sent:", title)
+            print("✅ Sent:", title)
 
-    except Exception as e:
-        print("❌ Error:", e)
+            seen.add(link)
+            save_seen(seen)
+
+            break  # send only 1 per run
+
+        except Exception as e:
+            print("❌ Error:", e)
 
 
-# 🚀 Run once (for GitHub Actions)
+# 🚀 Run once
 if __name__ == "__main__":
     asyncio.run(send_news())
