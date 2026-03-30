@@ -50,16 +50,17 @@ def get_news():
     return news
 
 
-# 🧠 Clean short summary
 def clean_summary(text):
     text = BeautifulSoup(text, "html.parser").get_text()
 
-    # remove unwanted phrases
-    for phrase in ["This article", "The article", "It's rare for"]:
-        text = text.replace(phrase, "")
-
     words = text.split()
-    return " ".join(words[:40])  # 🔥 short + viral
+    summary = " ".join(words[:40])
+
+    # ✅ Fix incomplete sentence
+    if not summary.endswith("."):
+        summary = summary.rsplit(" ", 1)[0] + "..."
+
+    return summary 🔥 short + viral
 
 
 # 🖼 Extract image
