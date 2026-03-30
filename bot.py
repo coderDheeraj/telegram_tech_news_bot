@@ -19,14 +19,13 @@ HEADERS = {
     "User-Agent": "Mozilla/5.0"
 }
 
-# 🗂 Multi-source RSS
+# 🌐 RSS Sources
 RSS_FEEDS = [
     "https://techcrunch.com/feed/",
     "https://www.theverge.com/rss/index.xml",
     "https://hnrss.org/frontpage"
 ]
 
-# 📁 File to store sent links
 SEEN_FILE = "seen.json"
 
 
@@ -44,7 +43,7 @@ def save_seen(seen):
         json.dump(list(seen), f)
 
 
-# 📰 Get all news
+# 📰 Get news from all sources
 def get_news():
     all_news = []
 
@@ -61,15 +60,14 @@ def get_news():
     return all_news
 
 
-# 🧠 Clean summary (≤ 60 words)
+# 🧠 Clean summary
 def clean_summary(text):
     text = BeautifulSoup(text, "html.parser").get_text()
-
     words = text.split()
     return " ".join(words[:60])
 
 
-# 🔥 Viral headline
+# 🔥 Catchy title
 def make_catchy(title):
     hooks = [
         "🚨 Breaking:",
@@ -101,26 +99,31 @@ async def send_news():
 
     print("🚀 Sending news...")
 
-    # Shuffle for randomness
     random.shuffle(news_list)
 
     for news in news_list:
-        if news["link"] in seen:
+        link = news["link"]
+
+        # ❌ Skip unwanted sources
+        if any(domain in link for domain in [
+            "github.com",
+            "news.ycombinator.com",
+            "reddit.com"
+        ]):
+            continue
+
+        # ❌ Skip duplicates
+        if link in seen:
             continue
 
         try:
             title = html.escape(make_catchy(news["title"]))
-            link = news["link"]
-
-# ❌ Skip unwanted links
-if any(domain in link for domain in [
-    "github.com",
-    "news.ycombinator.com",
-    "reddit.com"
-]):
-    continue
             summary = clean_summary(news["summary"])
             tags = get_tags(news["title"])
+
+            # ❌ Skip weak summaries
+            if len(summary.split()) < 10:
+                continue
 
             message = f"""
 🚀 Tech Pulse
@@ -144,12 +147,12 @@ if any(domain in link for domain in [
             seen.add(link)
             save_seen(seen)
 
-            break  # send only 1 per run
+            break  # send only one per run
 
         except Exception as e:
             print("❌ Error:", e)
 
 
-# 🚀 Run once
+# 🚀 Run once (GitHub Actions)
 if __name__ == "__main__":
     asyncio.run(send_news())
