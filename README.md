@@ -4,6 +4,8 @@ Telegram Tech News Bot is an automated bot that fetches and posts the latest tec
 
 Repository: https://github.com/coderDheeraj/telegram_tech_news_bot
 
+Telegram Channel: https://t.me/httpstmeRUgRBrTdTcdjN2U1
+
 ---
 
 ## Preview
@@ -115,6 +117,12 @@ Features include:
 - Scheduled workflows
 - Secure secret management
 - Automated execution
+
+---
+
+## Join Telegram Channel
+
+[Join Telegram Channel](https://t.me/httpstmeRUgRBrTdTcdjN2U1)
 
 ---
 
