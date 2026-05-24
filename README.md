@@ -8,7 +8,7 @@ Repository: https://github.com/coderDheeraj/telegram_tech_news_bot
 
 ## Preview
 
-![Telegram Tech News Bot](.preview.png)
+![Telegram Tech News Bot](./preview.png)
 
 ---
 
